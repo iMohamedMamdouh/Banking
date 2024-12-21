@@ -85,7 +85,7 @@ public class TransactionPage {
                     try (Connection connection = DatabaseConnection.getConnection();
                          PreparedStatement stmt = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
 
-                        int userID = Integer.parseInt(selectedAccount); // افترض أن "selectedAccount" هو ID المستخدم.
+                        int userID = Integer.parseInt(selectedAccount.split(" - ")[0]); // استخراج ID المستخدم من السلسلة النصية.
 
                         stmt.setInt(1, userID);
                         stmt.setString(2, transactionType);
@@ -121,14 +121,15 @@ public class TransactionPage {
 
     // تحميل الحسابات من قاعدة البيانات
     private void loadAccounts(JComboBox<String> accountComboBox) {
-        String query = "SELECT UserID FROM accounts"; // افترض أن هناك جدول accounts
+        String query = "SELECT UserID, Username FROM users";  // استعلام لاختيار المستخدمين
         try (Connection connection = DatabaseConnection.getConnection();
              Statement stmt = connection.createStatement();
              ResultSet rs = stmt.executeQuery(query)) {
 
             while (rs.next()) {
                 int userID = rs.getInt("UserID");
-                accountComboBox.addItem(String.valueOf(userID)); // إضافة الحسابات إلى القائمة
+                String name = rs.getString("Username");
+                accountComboBox.addItem(userID + " - " + name); // إضافة ID واسم المستخدم إلى القائمة
             }
         } catch (SQLException ex) {
             ex.printStackTrace();
@@ -141,19 +142,20 @@ public class TransactionPage {
         try (Connection connection = DatabaseConnection.getConnection();
              PreparedStatement stmt = connection.prepareStatement(query)) {
 
-            stmt.setInt(1, Integer.parseInt(selectedAccount)); // تمرير UserID المحدد
+            int userID = Integer.parseInt(selectedAccount.split(" - ")[0]);
+            stmt.setInt(1, userID); // تمرير UserID المحدد
             ResultSet rs = stmt.executeQuery();
 
             model.setRowCount(0); // مسح البيانات القديمة
 
             while (rs.next()) {
                 int transactionID = rs.getInt("TransactionID");
-                int userID = rs.getInt("UserID");
+                int userIDFromDB = rs.getInt("UserID");
                 String transactionType = rs.getString("TransactionType");
                 double amount = rs.getDouble("Amount");
                 Timestamp timestamp = rs.getTimestamp("Timestamp");
 
-                model.addRow(new Object[]{transactionID, userID, transactionType, amount, timestamp});
+                model.addRow(new Object[]{transactionID, userIDFromDB, transactionType, amount, timestamp});
             }
         } catch (SQLException ex) {
             ex.printStackTrace();

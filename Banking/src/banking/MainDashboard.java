@@ -102,11 +102,19 @@ public class MainDashboard {
         addAccount.addActionListener(e -> {
             frame.dispose();
             new AddAccountPage(); // فتح صفحة إضافة الحساب
-        });
-
-        exit.addActionListener(e -> {
+        });        
+        manageAccounts.addActionListener(e -> {
             frame.dispose();
-            new LoginPage();
+            new ManageAccountsPage(username); // فتح صفحة إضافة الحساب
+        });
+        
+        manageLoans.addActionListener(e -> {
+            frame.dispose();
+            new ManageLoansPage(username); // فتح صفحة إضافة الحساب
+        });
+        btnMyProfile.addActionListener(e -> {
+            frame.dispose();
+            new ProfilePage(username); // فتح صفحة إضافة الحساب
         });
         about.addActionListener(e -> JOptionPane.showMessageDialog(frame, "Banking System\nVersion 1.0", "About", JOptionPane.INFORMATION_MESSAGE));
 

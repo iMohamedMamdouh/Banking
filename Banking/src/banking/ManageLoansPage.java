@@ -10,60 +10,70 @@ import java.sql.*;
 public class ManageLoansPage {
 
     private JFrame frame;
+    private JTable loansTable;
+    private DefaultTableModel tableModel;
     private String username;
+
     public ManageLoansPage(String username) {
-        this.username = username;  // تعيين اسم المستخدم الذي سجل الدخول
-        // إنشاء الإطار
-        frame = new JFrame("Manage Loans");
+        this.username = username;
+        this.frame = new JFrame("Manage Loans");
+        this.tableModel = new DefaultTableModel(new String[]{"Loan ID", "Client Name", "Loan Type", "Amount", "Interest Rate"}, 0);
+        this.loansTable = new JTable(tableModel);
+
+        // Setup UI components
+        setupUI();
+
+        // Load loan data
+        loadLoansData();
+    }
+
+    private void setupUI() {
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         frame.setSize(800, 600);
         frame.setLocationRelativeTo(null);
 
-        // لوحة الجدول
-        String[] columnNames = {"Loan ID", "Client Name", "Loan Type", "Amount", "Interest Rate"};
-        DefaultTableModel model = new DefaultTableModel(columnNames, 0);
-        JTable loansTable = new JTable(model);
         JScrollPane tableScrollPane = new JScrollPane(loansTable);
 
-        // لوحة الأزرار
+        // Buttons panel
         JPanel buttonPanel = new JPanel();
         JButton btnAdd = new JButton("Add Loan");
         JButton btnEdit = new JButton("Edit Loan");
         JButton btnDelete = new JButton("Delete Loan");
         JButton btnBack = new JButton("Back to Home");
+
         buttonPanel.add(btnAdd);
         buttonPanel.add(btnEdit);
         buttonPanel.add(btnDelete);
         buttonPanel.add(btnBack);
-        // ترتيب العناصر في الإطار
+
+        // Layout setup
         frame.setLayout(new BorderLayout());
         frame.add(tableScrollPane, BorderLayout.CENTER);
         frame.add(buttonPanel, BorderLayout.SOUTH);
 
-        // تحميل القروض من قاعدة البيانات
-        loadLoansFromDatabase(model);
-
-        // وظائف الأزرار
+        // Button actions
         btnAdd.addActionListener(e -> {
             frame.dispose();
-            new AddLoanPage(); // فتح صفحة إضافة قرض جديدة
+            new AddLoanPage(); // Navigate to Add Loan Page
         });
+
         btnBack.addActionListener(e -> {
             frame.dispose();
-            new MainDashboard(username); // فتح الصفحة الرئيسية (إذا كان لديك صفحة رئيسية باسم HomePage).
+            new MainDashboard(username); // Navigate back to dashboard
         });
-        btnEdit.addActionListener(e -> JOptionPane.showMessageDialog(frame, "Edit Loan functionality"));
-        btnDelete.addActionListener(e -> JOptionPane.showMessageDialog(frame, "Delete Loan functionality"));
 
-        // عرض الإطار
+        btnEdit.addActionListener(e -> editLoan());
+        btnDelete.addActionListener(e -> deleteLoan());
+
         frame.setVisible(true);
     }
 
-    // تحميل القروض من قاعدة البيانات
-    private void loadLoansFromDatabase(DefaultTableModel model) {
+    private void loadLoansData() {
         String query = "SELECT LoanID, UserID, LoanType, Amount, InterestRate FROM loans";
+        try (Connection connection = DatabaseConnection.getConnection();
+             Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
 
-        try (Connection connection = DatabaseConnection.getConnection(); Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery(query)) {
             while (rs.next()) {
                 int loanID = rs.getInt("LoanID");
                 int userID = rs.getInt("UserID");
@@ -71,13 +81,61 @@ public class ManageLoansPage {
                 double amount = rs.getDouble("Amount");
                 double interestRate = rs.getDouble("InterestRate");
 
-                // إضافة البيانات إلى الجدول
-                model.addRow(new Object[]{loanID, userID, loanType, "$" + amount, interestRate + "%"});
+                tableModel.addRow(new Object[]{loanID, userID, loanType, amount, interestRate});
             }
-
         } catch (SQLException e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(frame, "Error loading loans from database.");
+        }
+    }
+
+    private void editLoan() {
+        int selectedRow = loansTable.getSelectedRow();
+        if (selectedRow != -1) {
+            int loanID = (Integer) loansTable.getValueAt(selectedRow, 0);
+            int userID = (Integer) loansTable.getValueAt(selectedRow, 1);
+            String loanType = (String) loansTable.getValueAt(selectedRow, 2);
+            double amount = (Double) loansTable.getValueAt(selectedRow, 3);
+            double interestRate = (Double) loansTable.getValueAt(selectedRow, 4);
+
+            frame.dispose();
+            new EditLoanPage(loanID, userID, loanType, amount, interestRate,username);
+        } else {
+            JOptionPane.showMessageDialog(frame, "Please select a loan to edit.");
+        }
+    }
+
+    private void deleteLoan() {
+        int selectedRow = loansTable.getSelectedRow();
+        if (selectedRow != -1) {
+            int loanID = (Integer) loansTable.getValueAt(selectedRow, 0);
+
+            int confirm = JOptionPane.showConfirmDialog(frame, "Are you sure you want to delete this loan?", "Confirm Deletion", JOptionPane.YES_NO_OPTION);
+            if (confirm == JOptionPane.YES_OPTION) {
+                deleteLoanFromDatabase(loanID);
+                tableModel.removeRow(selectedRow);
+            }
+        } else {
+            JOptionPane.showMessageDialog(frame, "Please select a loan to delete.");
+        }
+    }
+
+    private void deleteLoanFromDatabase(int loanID) {
+        String query = "DELETE FROM loans WHERE LoanID = ?";
+        try (Connection connection = DatabaseConnection.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(query)) {
+
+            stmt.setInt(1, loanID);
+            int rowsAffected = stmt.executeUpdate();
+
+            if (rowsAffected > 0) {
+                JOptionPane.showMessageDialog(frame, "Loan deleted successfully.");
+            } else {
+                JOptionPane.showMessageDialog(frame, "Loan deletion failed.");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(frame, "Error occurred while deleting the loan.");
         }
     }
 }

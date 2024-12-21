@@ -50,7 +50,7 @@ public class LoginPage {
         frame.add(buttonPanel, BorderLayout.SOUTH);
 
         // وظائف الأزرار
-        btnLogin.addActionListener((var e) -> {
+        btnLogin.addActionListener(e -> {
             String username = txtUsername.getText();
             String password = String.valueOf(txtPassword.getPassword());
             
